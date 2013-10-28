@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo "Would be processing voicemail into an image"
