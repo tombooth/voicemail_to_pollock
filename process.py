@@ -12,7 +12,7 @@ import json
 import hashlib
 import random
 import urllib
-import httplib
+import httplib2
 import subprocess
 import time
 
@@ -28,6 +28,8 @@ def store_voicemail(s3_bucket, hashed_user, url):
 
 	(filename, headers) = urllib.urlretrieve(url)
 
+	httplib2.Http().request(url, method='DELETE')
+
 	return (filename, upload_file(s3_bucket, key, filename))
 
 def create_pollock(s3_bucket, voicemail_filename):
@@ -39,16 +41,18 @@ def create_pollock(s3_bucket, voicemail_filename):
 	return upload_file(s3_bucket, key, filename)
 
 def add_to_gallery(hashed_user, voicemail_url, pollock_url):
-	gallery = httplib.HTTPConnection('api.pollock.artcollective.io')
 	gallery_entry = {
 		'url': pollock_url,
 		'inspiration_url': voicemail_url
 	}
 
-	gallery.request('POST', '/' + hashed_user, json.dumps(gallery_entry))
-	response = gallery.getresponse()
+	(response, content) = httplib2.Http().request(
+		'http://api.pollock.artcollective.io/%s' % hashed_user,
+		method='POST',
+		body=json.dumps(gallery_entry)
+	)
 
-	json_response = json.load(response)
+	json_response = json.loads(content)
 
 	return 'http://pollock.artcollective.io/' + json_response['pid']
 
