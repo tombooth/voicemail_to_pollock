@@ -13,20 +13,31 @@ import hashlib
 import random
 import urllib
 import httplib
+import tempfile
+import subprocess
+import time
+
+def upload_file(s3_bucket, key, filename):
+	s3_key = s3_bucket.new_key(key)
+	s3_key.set_contents_from_filename(filename)
+	s3_key.set_acl('public-read')
+	
+	return s3_key.generate_url(expires_in=0, query_auth=False)
 
 def store_voicemail(s3_bucket, hashed_user, url):
 	key = hashlib.sha256(hashed_user + url + str(random.randint(0, 1000))).hexdigest()
 
 	(filename, headers) = urllib.urlretrieve(url)
 
-	s3_key = s3_bucket.new_key(key)
-	s3_key.set_contents_from_filename(filename)
-	s3_key.set_acl('public-read')
+	return (filename, upload_file(s3_bucket, key, filename))
 
-	return (filename, s3_key.generate_url(expires_in=0, query_auth=False))
+def create_pollock(s3_bucket, voicemail_filename):
+	(file_hanlder, filename) = tempfile.mkstemp()
+	key = hashlib.sha256(voicemail_filename + filename + str(time.time()) + str(random.randint(0, 1000))).hexdigest()
 
-def create_pollock(s3_bucket, voicemail_filesname):
-	return 'http://foo'
+	subprocess.call(['pollock', '-n 1000', '-o ' + filename])
+
+	return upload_file(s3_bucket, key, filename)
 
 def add_to_gallery(hashed_user, voicemail_url, pollock_url):
 	gallery = httplib.HTTPConnection('api.pollock.artcollective.io')
