@@ -60,10 +60,10 @@ def add_to_gallery(hashed_user, voicemail_url, pollock_url):
 
 	return 'http://pollock.artcollective.io/' + json_response['pid']
 
-def send_to_muse(client, from_phonenumber, gallery_url):
+def send_to_muse(client, from_, to, gallery_url):
 	client.messages.create(
-		to=from_phonenumber,
-		from_='+441290211866',
+		to=to,
+		from_=from_,
 		body='Your painting is ready, please go to ' + gallery_url
 	)
 	pass
@@ -86,5 +86,5 @@ if __name__ == '__main__':
 
 	gallery_url = add_to_gallery(hashed_user, voicemail_url, pollock_url)
 
-	send_to_muse(twilio_client, job['From'], gallery_url)
+	send_to_muse(twilio_client, job['To'], job['From'], gallery_url)
 
