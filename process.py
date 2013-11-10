@@ -7,6 +7,7 @@ from docopt import docopt
 from boto.s3.connection import S3Connection
 from twilio.rest import TwilioRestClient
 
+import re
 import sys
 import json
 import hashlib
@@ -23,12 +24,15 @@ def upload_file(s3_bucket, key, filename):
 	
 	return s3_key.generate_url(expires_in=0, query_auth=False)
 
-def store_voicemail(s3_bucket, hashed_user, url):
+def store_voicemail(client, s3_bucket, hashed_user, url):
+	recording_id = re.search('\/([^\/]+)$', url).group(1)
+
+	url = url + '.mp3'
 	key = hashlib.sha256(hashed_user + url + str(random.randint(0, 1000))).hexdigest()
 
 	(filename, headers) = urllib.urlretrieve(url)
 
-	httplib2.Http().request(url, method='DELETE')
+	client.recordings.delete(recording_id)
 
 	return (filename, upload_file(s3_bucket, key, filename))
 
@@ -70,12 +74,14 @@ if __name__ == '__main__':
 	s3_conn = S3Connection(arguments['--s3-id'], arguments['--s3-secret'])
 	s3_bucket = s3_conn.get_bucket('pollock-artcollectiveio')
 
-	twilio_client = TwilioRestClient(arguments['--twilio-account'], arguments['--twilio-token'])
+	twilio_client = TwilioRestClient(
+		arguments['--twilio-account'], arguments['--twilio-token'])
 
 	job = json.load(sys.stdin)
 	hashed_user = hashlib.sha256(job['From']).hexdigest()
 
-	(voicemail_filename, voicemail_url) = store_voicemail(s3_bucket, hashed_user, job['Url'])
+	(voicemail_filename, voicemail_url) = store_voicemail(
+		twilio_client, s3_bucket, hashed_user, job['Url'])
 	pollock_url = create_pollock(s3_bucket, voicemail_filename)
 
 	gallery_url = add_to_gallery(hashed_user, voicemail_url, pollock_url)
