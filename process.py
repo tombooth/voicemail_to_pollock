@@ -13,7 +13,6 @@ import hashlib
 import random
 import urllib
 import httplib
-import tempfile
 import subprocess
 import time
 
@@ -32,10 +31,10 @@ def store_voicemail(s3_bucket, hashed_user, url):
 	return (filename, upload_file(s3_bucket, key, filename))
 
 def create_pollock(s3_bucket, voicemail_filename):
-	(file_hanlder, filename) = tempfile.mkstemp()
-	key = hashlib.sha256(voicemail_filename + filename + str(time.time()) + str(random.randint(0, 1000))).hexdigest()
+	key = hashlib.sha256(voicemail_filename + str(time.time()) + str(random.randint(0, 1000))).hexdigest()
+	filename = '/tmp/pollock-%s.png' % key
 
-	subprocess.call(['pollock', '-n 1000', '-o ' + filename])
+	subprocess.call('pollock -n 1000 -o %s' % filename, shell=True)
 
 	return upload_file(s3_bucket, key, filename)
 
