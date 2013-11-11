@@ -40,7 +40,7 @@ def create_pollock(s3_bucket, voicemail_filename):
 	key = hashlib.sha256(voicemail_filename + str(time.time()) + str(random.randint(0, 1000))).hexdigest()
 	filename = '/tmp/pollock-%s.png' % key
 
-	subprocess.call('pollock -n 1000 -o %s' % filename, shell=True)
+	subprocess.call('pollock --num 1000 --output %s' % filename, shell=True)
 
 	return upload_file(s3_bucket, key, filename)
 
